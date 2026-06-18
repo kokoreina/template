@@ -10,7 +10,7 @@ spec:
   restartPolicy: Never
   containers:
   - name: signed
-    image: ghcr.io/kokoreina/w10-api:REPLACE_WITH_SIGNED_TAG
+    image: ghcr.io/kokoreina/w10-api:v0.0.1-c782b0a
     imagePullPolicy: IfNotPresent
     ports:
     - containerPort: 8080
