@@ -1,0 +1,17 @@
+# Lab 2.2 - Require Cosign signatures for API images in opted-in namespaces.
+# Replace this placeholder public key with the real content of signing/cosign.pub.
+apiVersion: policy.sigstore.dev/v1beta1
+kind: ClusterImagePolicy
+metadata:
+  name: require-signed-w10-api
+spec:
+  images:
+  - glob: "ghcr.io/*/w10-api*"
+  authorities:
+  - name: cosign-public-key
+    key:
+      data: |
+        -----BEGIN PUBLIC KEY-----
+        MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEOz9FcbJM/oOkC26Wfo9paG2tYGBL
+        usDLHze93DzgLaAPDsyJrygpVnL9M6SOyfyXEsjpBTUu6uFZqHua8hwAlA==
+        -----END PUBLIC KEY-----

@@ -1,0 +1,7 @@
+# Lab 2.2 - Opt namespace demo into Sigstore Policy Controller enforcement.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: demo
+  labels:
+    policy.sigstore.dev/include: "true"

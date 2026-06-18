@@ -1,0 +1,7 @@
+# Lab 2.1 - Namespace for ESO demo workloads.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: demo
+  labels:
+    name: demo

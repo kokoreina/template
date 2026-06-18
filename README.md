@@ -259,11 +259,95 @@ git push origin main
 
 ## Configuration Reference
 
+## Lab 2.1 - External Secrets Operator
+
+Added:
+
+```
+eso/
+argocd/apps/eso.yaml
+argocd/apps/eso-config.yaml
+```
+
+`argocd/apps/eso.yaml` installs External Secrets Operator first. `argocd/apps/eso-config.yaml` syncs `eso/` after the CRDs exist.
+
+AWS credentials are created manually and must not be committed:
+
+```bash
+kubectl create secret generic aws-creds -n demo \
+  --from-literal=access-key=REPLACE_WITH_AWS_ACCESS_KEY_ID \
+  --from-literal=secret-key=REPLACE_WITH_AWS_SECRET_ACCESS_KEY
+```
+
+Evidence:
+
+```bash
+kubectl get pods -n external-secrets
+kubectl get secretstore -n demo
+kubectl describe externalsecret db-secret -n demo
+kubectl get secret db-secret -n demo -o jsonpath='{.data.password}' | base64 -d; echo
+kubectl get pod secret-reader -n demo -o jsonpath='{.metadata.creationTimestamp}{"\n"}'
+kubectl logs secret-reader -n demo --tail=20
+git grep -nEi '(AKIA[0-9A-Z]{16}|ASIA[0-9A-Z]{16}|aws_secret_access_key\s*=|BEGIN (ENCRYPTED )?COSIGN PRIVATE KEY)' -- . ':!README.md' ':!eso/README.md' ':!signing/README.md' ':!runbooks/*.md'
+```
+
+Local fallback: `eso/secret-store-fake.yaml` uses ESO fake provider for local tests only. The AWS SecretStore remains in Git for the mentor requirement.
+
+## Lab 2.2 - Trivy + Cosign + Admission Verify
+
+Added:
+
+```
+signing/
+policies/
+runbooks/
+argocd/apps/policy-controller.yaml
+argocd/apps/policies.yaml
+```
+
+The build workflow now:
+
+- builds the image from `src/api`
+- scans with Trivy and fails on `HIGH` or `CRITICAL`
+- pushes to GHCR only after the scan passes
+- installs Cosign
+- signs the exact semver tag written into `app-api/rollout.yaml`
+
+Cosign private key and password belong in GitHub Secrets:
+
+```bash
+cosign generate-key-pair
+gh secret set COSIGN_PRIVATE_KEY < cosign.key
+gh secret set COSIGN_PASSWORD
+cp cosign.pub signing/cosign.pub
+```
+
+Also paste the same public key into `policies/cluster-image-policy.yaml`.
+
+Admission evidence:
+
+```bash
+kubectl get pods -n cosign-system
+kubectl get ns demo --show-labels
+kubectl get clusterimagepolicy
+kubectl apply -f policies/unsigned-image-test.yaml
+cosign verify --key signing/cosign.pub ghcr.io/kokoreina/w10-api:TAG
+sed "s/REPLACE_WITH_SIGNED_TAG/TAG/" policies/signed-image-test.yaml | kubectl apply -f -
+```
+
+Runbooks:
+
+- `runbooks/eso-rotation-runbook.md`
+- `runbooks/supply-chain-runbook.md`
+- `runbooks/cve-exception-adr.md`
+
 ### Sync Waves
 ArgoCD applications deploy in order:
+- Wave -2: `external-secrets`, `policy-controller`, `gatekeeper`
 - Wave -1: `app-common` (namespace)
 - Wave 0: `k8s-prometheus`, `k8s-rollout` (infrastructure)
-- Wave 1: `app-analysis`, `app-alert` (configuration)
+- Wave -1: `eso-config`, `policies`
+- Wave 1: `app-analysis`, `app-alert`, `gatekeeper-constraints` (configuration)
 - Wave 2: `app-api` (application)
 
 ## Cleanup

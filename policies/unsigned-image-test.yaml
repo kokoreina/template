@@ -1,0 +1,18 @@
+# Lab 2.2 - This pod should be rejected in namespace demo.
+apiVersion: v1
+kind: Pod
+metadata:
+  name: unsigned-image-test
+  namespace: demo
+  labels:
+    app: unsigned-image-test
+spec:
+  restartPolicy: Never
+  containers:
+  - name: unsigned
+    image: ghcr.io/kokoreina/w10-api:unsigned-test
+    imagePullPolicy: IfNotPresent
+    resources:
+      limits:
+        cpu: 50m
+        memory: 64Mi

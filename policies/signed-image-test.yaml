@@ -1,0 +1,20 @@
+# Lab 2.2 - Replace the image tag with a Cosign-signed tag from CI.
+apiVersion: v1
+kind: Pod
+metadata:
+  name: signed-image-test
+  namespace: demo
+  labels:
+    app: signed-image-test
+spec:
+  restartPolicy: Never
+  containers:
+  - name: signed
+    image: ghcr.io/kokoreina/w10-api:REPLACE_WITH_SIGNED_TAG
+    imagePullPolicy: IfNotPresent
+    ports:
+    - containerPort: 8080
+    resources:
+      limits:
+        cpu: 100m
+        memory: 128Mi

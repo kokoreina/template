@@ -1,20 +1,25 @@
-# Lab 5: app-of-apps root
-# Root App: App of Apps pattern - quản lý tất cả child applications
+# Lab 2.1 - Sync ESO SecretStore, ExternalSecret, and reader pod.
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: root
+  name: eso-config
   namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "-1"
 spec:
   project: default
   source:
     repoURL: https://github.com/kokoreina/template.git
-    path: argocd/apps
+    path: eso
     targetRevision: main
   destination:
     server: https://kubernetes.default.svc
-    namespace: argocd
+    namespace: demo
   syncPolicy:
     automated:
       prune: true
       selfHeal: true
+    syncOptions:
+    - CreateNamespace=true
+    - ServerSideApply=true
+    - SkipDryRunOnMissingResource=true
