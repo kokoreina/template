@@ -1,0 +1,99 @@
+# Lab 1.2 - 4 admission rules in deny mode
+apiVersion: constraints.gatekeeper.sh/v1beta1
+kind: K8sDisallowedLatestTag
+metadata:
+  name: deny-image-latest-tag
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+spec:
+  enforcementAction: deny
+  match:
+    kinds:
+    - apiGroups: [""]
+      kinds: ["Pod"]
+    - apiGroups: ["apps"]
+      kinds: ["Deployment", "StatefulSet", "DaemonSet"]
+    - apiGroups: ["batch"]
+      kinds: ["Job", "CronJob"]
+    - apiGroups: ["argoproj.io"]
+      kinds: ["Rollout"]
+    excludedNamespaces: ["kube-system", "kube-public", "kube-node-lease", "argocd", "gatekeeper-system", "monitoring", "argo-rollouts"]
+---
+apiVersion: constraints.gatekeeper.sh/v1beta1
+kind: K8sRequiredLimits
+metadata:
+  name: require-cpu-memory-limits
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+spec:
+  enforcementAction: deny
+  match:
+    kinds:
+    - apiGroups: [""]
+      kinds: ["Pod"]
+    - apiGroups: ["apps"]
+      kinds: ["Deployment", "StatefulSet", "DaemonSet"]
+    - apiGroups: ["batch"]
+      kinds: ["Job", "CronJob"]
+    - apiGroups: ["argoproj.io"]
+      kinds: ["Rollout"]
+    excludedNamespaces: ["kube-system", "kube-public", "kube-node-lease", "argocd", "gatekeeper-system", "monitoring", "argo-rollouts"]
+---
+apiVersion: constraints.gatekeeper.sh/v1beta1
+kind: K8sDisallowRootUser
+metadata:
+  name: deny-runasuser-root
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+spec:
+  enforcementAction: deny
+  match:
+    kinds:
+    - apiGroups: [""]
+      kinds: ["Pod"]
+    - apiGroups: ["apps"]
+      kinds: ["Deployment", "StatefulSet", "DaemonSet"]
+    - apiGroups: ["batch"]
+      kinds: ["Job", "CronJob"]
+    - apiGroups: ["argoproj.io"]
+      kinds: ["Rollout"]
+    excludedNamespaces: ["kube-system", "kube-public", "kube-node-lease", "argocd", "gatekeeper-system", "monitoring", "argo-rollouts"]
+---
+apiVersion: constraints.gatekeeper.sh/v1beta1
+kind: K8sDisallowHostNetwork
+metadata:
+  name: deny-hostnetwork
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+spec:
+  enforcementAction: deny
+  match:
+    kinds:
+    - apiGroups: [""]
+      kinds: ["Pod"]
+    - apiGroups: ["apps"]
+      kinds: ["Deployment", "StatefulSet", "DaemonSet"]
+    - apiGroups: ["batch"]
+      kinds: ["Job", "CronJob"]
+    - apiGroups: ["argoproj.io"]
+      kinds: ["Rollout"]
+    excludedNamespaces: ["kube-system", "kube-public", "kube-node-lease", "argocd", "gatekeeper-system", "monitoring", "argo-rollouts"]
+---
+# Lab 1.3 - Custom policy: reject workload replicas > 5
+apiVersion: constraints.gatekeeper.sh/v1beta1
+kind: K8sMaxReplicas
+metadata:
+  name: max-replicas-five
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+spec:
+  enforcementAction: deny
+  match:
+    kinds:
+    - apiGroups: ["apps"]
+      kinds: ["Deployment", "StatefulSet"]
+    - apiGroups: ["argoproj.io"]
+      kinds: ["Rollout"]
+    excludedNamespaces: ["kube-system", "kube-public", "kube-node-lease", "argocd", "gatekeeper-system", "monitoring", "argo-rollouts"]
+  parameters:
+    maxReplicas: 5

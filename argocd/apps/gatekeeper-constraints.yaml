@@ -1,0 +1,24 @@
+# Lab 1.2 + 1.3 - Gatekeeper constraints
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: gatekeeper-constraints
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/Vuong-Bach/temp.git
+    path: gatekeeper/constraints
+    targetRevision: main
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: gatekeeper-system
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+    - ServerSideApply=true
+    - SkipDryRunOnMissingResource=true

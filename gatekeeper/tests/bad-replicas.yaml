@@ -1,0 +1,22 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: bad-replicas
+  namespace: demo
+spec:
+  replicas: 6
+  selector:
+    matchLabels:
+      app: bad-replicas
+  template:
+    metadata:
+      labels:
+        app: bad-replicas
+    spec:
+      containers:
+      - name: nginx
+        image: nginx:1.27
+        resources:
+          limits:
+            cpu: 100m
+            memory: 64Mi

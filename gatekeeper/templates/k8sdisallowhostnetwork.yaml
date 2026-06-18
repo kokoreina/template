@@ -1,0 +1,37 @@
+apiVersion: templates.gatekeeper.sh/v1
+kind: ConstraintTemplate
+metadata:
+  name: k8sdisallowhostnetwork
+  annotations:
+    argocd.argoproj.io/sync-wave: "-1"
+spec:
+  crd:
+    spec:
+      names:
+        kind: K8sDisallowHostNetwork
+      validation:
+        openAPIV3Schema:
+          type: object
+  targets:
+  - target: admission.k8s.gatekeeper.sh
+    rego: |
+      package k8sdisallowhostnetwork
+
+      get_pod_spec(obj) = spec {
+        obj.kind == "Pod"
+        spec := obj.spec
+      }
+      get_pod_spec(obj) = spec {
+        obj.kind == "CronJob"
+        spec := obj.spec.jobTemplate.spec.template.spec
+      }
+      get_pod_spec(obj) = spec {
+        obj.kind != "Pod"
+        obj.kind != "CronJob"
+        spec := obj.spec.template.spec
+      }
+      violation[{"msg": msg}] {
+        spec := get_pod_spec(input.review.object)
+        spec.hostNetwork == true
+        msg := "hostNetwork: true is forbidden"
+      }
