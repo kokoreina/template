@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Lab 2.1 - ESO Start Guide</title>
+  <style>
+    :root {
+      --ink: #172033;
+      --muted: #5b667a;
+      --line: #dbe3ef;
+      --soft: #f7f9fc;
+      --dark: #0f172a;
+      --accent: #f59e0b;
+      --good: #16a34a;
+      --bad: #dc2626;
+      --blue: #2563eb;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Segoe UI", Arial, sans-serif;
+      color: var(--ink);
+      background: #ffffff;
+      line-height: 1.55;
+    }
+    main {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 40px 24px 64px;
+    }
+    h1 {
+      font-size: 42px;
+      line-height: 1.1;
+      margin: 10px 0 12px;
+      letter-spacing: -0.02em;
+    }
+    h2 {
+      margin-top: 34px;
+      padding-top: 22px;
+      border-top: 1px solid var(--line);
+      font-size: 25px;
+    }
+    h3 { margin-top: 24px; font-size: 19px; }
+    p, li { font-size: 16px; color: var(--muted); }
+    code {
+      font-family: Consolas, "Courier New", monospace;
+      background: #eef2f7;
+      padding: 2px 6px;
+      border-radius: 5px;
+      color: var(--dark);
+    }
+    pre {
+      margin: 12px 0 20px;
+      padding: 16px 18px;
+      overflow-x: auto;
+      color: #e5e7eb;
+      background: var(--dark);
+      border-radius: 10px;
+      border: 1px solid #24324a;
+      font-size: 14px;
+      line-height: 1.55;
+    }
+    pre code {
+      padding: 0;
+      background: transparent;
+      color: inherit;
+    }
+    .tag {
+      display: inline-block;
+      padding: 6px 12px;
+      border-radius: 7px;
+      color: #fff;
+      background: linear-gradient(135deg, var(--accent), #ef4444);
+      font-size: 13px;
+      font-weight: 800;
+      letter-spacing: .04em;
+      text-transform: uppercase;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 16px;
+      margin: 18px 0;
+    }
+    .card {
+      padding: 16px 18px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: var(--soft);
+    }
+    .card strong { color: var(--ink); }
+    .ok { border-left: 5px solid var(--good); }
+    .warn { border-left: 5px solid var(--accent); }
+    .danger { border-left: 5px solid var(--bad); }
+    .blue { border-left: 5px solid var(--blue); }
+    .checklist li { margin: 8px 0; }
+    .small { font-size: 14px; }
+    @media (max-width: 760px) {
+      h1 { font-size: 32px; }
+      .grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+<main>
+  <span class="tag">Lab 2.1 - ESO</span>
+  <h1>Start Guide: rotate secret không restart pod</h1>
+  <p>
+    Mục tiêu theo slide mentor: chuyển DB password sang AWS Secrets Manager + External Secrets Operator,
+    K8s Secret cập nhật trong khoảng <strong>&lt;= 60s</strong>, pod đọc secret qua volume nên <strong>không restart</strong>.
+  </p>
+
+  <div class="grid">
+    <div class="card ok">
+      <strong>Code đã có</strong>
+      <p><code>eso/</code>, <code>argocd/apps/eso.yaml</code>, <code>argocd/apps/eso-config.yaml</code>.</p>
+    </div>
+    <div class="card warn">
+      <strong>Không commit secret</strong>
+      <p>AWS access key tạo bằng <code>kubectl create secret</code>, không đưa vào Git.</p>
+    </div>
+  </div>
+
+  <h2>1. Đọc nhanh slide Lab 2.1</h2>
+  <ul class="checklist">
+    <li><strong>SecretStore</strong>: cấu hình provider AWS Secrets Manager, region <code>ap-southeast-1</code>.</li>
+    <li><strong>ExternalSecret</strong>: map secret nguồn <code>/demo/db/password</code> thành K8s Secret <code>db-secret</code>, key <code>password</code>.</li>
+    <li><strong>refreshInterval</strong>: đặt <code>1m</code> để đạt yêu cầu cập nhật trong &lt;= 60s.</li>
+    <li><strong>No restart</strong>: pod phải mount secret bằng volume, không dùng env.</li>
+    <li><strong>Thứ tự GitOps</strong>: ESO operator/CRD chạy trước, config SecretStore/ExternalSecret chạy sau bằng sync wave.</li>
+  </ul>
+
+  <h2>2. Chuẩn bị cluster</h2>
+  <p>Chạy trong PowerShell. Nếu Docker Desktop chưa mở, mở trước rồi tạo minikube profile.</p>
+  <pre><code>minikube start -p w10 --driver=docker
+kubectl config use-context w10
+kubectl get nodes</code></pre>
+
+  <h2>3. Cài ArgoCD nếu cluster mới</h2>
+  <pre><code>kubectl create ns argocd
+kubectl apply --server-side -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml
+kubectl -n argocd rollout status deploy/argocd-server</code></pre>
+
+  <p>Lấy password UI nếu cần chụp ArgoCD evidence:</p>
+  <pre><code>$pwd64 = kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath="{.data.password}"
+[Text.Encoding]::UTF8.GetString([Convert]::FromBase64String($pwd64))</code></pre>
+
+  <h2>4. Luồng A - AWS thật, đúng chuẩn mentor</h2>
+  <div class="card danger">
+    <strong>Quan trọng:</strong>
+    <p>Trước khi apply <code>eso-config.yaml</code>, phải có AWS secret nguồn và Kubernetes secret <code>aws-creds</code>. Nếu thiếu, ExternalSecret sẽ chưa Ready.</p>
+  </div>
+
+  <h3>4.1. Tạo AWS secret nguồn</h3>
+  <p>Dùng AWS Console hoặc AWS CLI. Tên secret nguồn trong manifest là <code>/demo/db/password</code>.</p>
+  <pre><code>aws secretsmanager create-secret `
+  --name /demo/db/password `
+  --secret-string "password-v1" `
+  --region ap-southeast-1</code></pre>
+
+  <p>Nếu secret đã tồn tại, rotate bằng:</p>
+  <pre><code>aws secretsmanager put-secret-value `
+  --secret-id /demo/db/password `
+  --secret-string "password-v2" `
+  --region ap-southeast-1</code></pre>
+
+  <h3>4.2. Apply ESO operator trước</h3>
+  <pre><code>kubectl apply -f argocd/apps/eso.yaml
+kubectl get applications -n argocd
+kubectl -n external-secrets get pods
+kubectl -n external-secrets rollout status deploy/external-secrets</code></pre>
+
+  <h3>4.3. Tạo namespace và AWS credentials thủ công</h3>
+  <pre><code>kubectl apply -f eso/namespace.yaml
+kubectl create secret generic aws-creds -n demo `
+  --from-literal=access-key=REPLACE_WITH_AWS_ACCESS_KEY_ID `
+  --from-literal=secret-key=REPLACE_WITH_AWS_SECRET_ACCESS_KEY</code></pre>
+
+  <h3>4.4. Apply ESO config qua ArgoCD</h3>
+  <pre><code>kubectl apply -f argocd/apps/eso-config.yaml
+kubectl get applications -n argocd
+kubectl get secretstore -n demo
+kubectl get externalsecret -n demo</code></pre>
+
+  <h3>4.5. Kiểm tra secret đã sync</h3>
+  <pre><code>kubectl describe secretstore aws-secretsmanager -n demo
+kubectl describe externalsecret db-secret -n demo
+kubectl get secret db-secret -n demo</code></pre>
+
+  <p>Decode secret trên Windows PowerShell:</p>
+  <pre><code>$b64 = kubectl get secret db-secret -n demo -o jsonpath="{.data.password}"
+[Text.Encoding]::UTF8.GetString([Convert]::FromBase64String($b64))</code></pre>
+
+  <h3>4.6. Chứng minh pod không restart khi rotate</h3>
+  <pre><code>kubectl get pod secret-reader -n demo -o wide
+kubectl get pod secret-reader -n demo -o jsonpath="{.metadata.creationTimestamp}{`n}"
+kubectl logs secret-reader -n demo --tail=20</code></pre>
+
+  <p>Rotate trên AWS, chờ 60 giây, rồi chạy lại:</p>
+  <pre><code>aws secretsmanager put-secret-value `
+  --secret-id /demo/db/password `
+  --secret-string "password-v2" `
+  --region ap-southeast-1
+
+Start-Sleep -Seconds 70
+
+$b64 = kubectl get secret db-secret -n demo -o jsonpath="{.data.password}"
+[Text.Encoding]::UTF8.GetString([Convert]::FromBase64String($b64))
+kubectl logs secret-reader -n demo --tail=20
+kubectl get pod secret-reader -n demo -o jsonpath="{.metadata.creationTimestamp}{`n}"</code></pre>
+
+  <div class="card ok">
+    <strong>Kỳ vọng nghiệm thu:</strong>
+    <p>Giá trị secret đổi sang <code>password-v2</code>, log pod đọc được value mới, creationTimestamp/AGE của pod không đổi.</p>
+  </div>
+
+  <h2>5. Luồng B - Fake provider local khi chưa có AWS</h2>
+  <div class="card warn">
+    <strong>Fallback local:</strong>
+    <p>Luồng này dùng <code>secret-store-fake.yaml</code> để chứng minh pattern. Không apply <code>argocd/apps/eso-config.yaml</code> trong luồng fake, vì ArgoCD self-heal sẽ đưa ExternalSecret quay lại AWS store.</p>
+  </div>
+
+  <h3>5.1. Cài ESO operator bằng ArgoCD</h3>
+  <pre><code>kubectl apply -f argocd/apps/eso.yaml
+kubectl -n external-secrets rollout status deploy/external-secrets</code></pre>
+
+  <h3>5.2. Apply config fake trực tiếp</h3>
+  <pre><code>kubectl apply -f eso/namespace.yaml
+kubectl apply -f eso/secret-store-fake.yaml
+kubectl apply -f eso/external-secret.yaml
+kubectl patch externalsecret db-secret -n demo --type merge -p '{"spec":{"secretStoreRef":{"name":"fake-secrets","kind":"SecretStore"},"data":[{"secretKey":"password","remoteRef":{"key":"/demo/db/password","version":"v1"}}]}}'
+kubectl apply -f eso/secret-reader-pod.yaml</code></pre>
+
+  <h3>5.3. Kiểm tra value v1</h3>
+  <pre><code>kubectl get secretstore fake-secrets -n demo
+kubectl get externalsecret db-secret -n demo
+$b64 = kubectl get secret db-secret -n demo -o jsonpath="{.data.password}"
+[Text.Encoding]::UTF8.GetString([Convert]::FromBase64String($b64))
+kubectl logs secret-reader -n demo --tail=10
+kubectl get pod secret-reader -n demo -o jsonpath="{.metadata.creationTimestamp}{`n}"</code></pre>
+
+  <h3>5.4. Rotate fake v1 sang v2</h3>
+  <pre><code>kubectl patch externalsecret db-secret -n demo --type merge -p '{"spec":{"data":[{"secretKey":"password","remoteRef":{"key":"/demo/db/password","version":"v2"}}]}}'
+Start-Sleep -Seconds 70
+$b64 = kubectl get secret db-secret -n demo -o jsonpath="{.data.password}"
+[Text.Encoding]::UTF8.GetString([Convert]::FromBase64String($b64))
+kubectl logs secret-reader -n demo --tail=20
+kubectl get pod secret-reader -n demo -o jsonpath="{.metadata.creationTimestamp}{`n}"</code></pre>
+
+  <h2>6. Evidence cần chụp cho mentor</h2>
+  <ul class="checklist">
+    <li><code>kubectl get pods -n external-secrets</code>: ESO operator Running.</li>
+    <li><code>kubectl describe secretstore aws-secretsmanager -n demo</code>: AWS SecretStore Ready nếu dùng AWS.</li>
+    <li><code>kubectl describe externalsecret db-secret -n demo</code>: ExternalSecret synced.</li>
+    <li>Decode <code>db-secret/password</code> trước và sau rotate.</li>
+    <li><code>kubectl get pod secret-reader -n demo</code>: AGE hoặc creationTimestamp không đổi sau rotate.</li>
+    <li><code>kubectl logs secret-reader -n demo --tail=20</code>: pod đọc value mới từ mounted volume.</li>
+    <li>Secret scan trong repo không có AWS key/private key thật.</li>
+  </ul>
+
+  <h2>7. Lệnh chứng minh repo sạch secret</h2>
+  <pre><code>git grep -nEi '(AKIA[0-9A-Z]{16}|ASIA[0-9A-Z]{16}|aws_secret_access_key\s*=|BEGIN (ENCRYPTED )?COSIGN PRIVATE KEY)' -- . ':!README.md' ':!eso/README.md' ':!signing/README.md' ':!runbooks/*.md'</code></pre>
+
+  <h2>8. Troubleshooting nhanh</h2>
+  <div class="grid">
+    <div class="card blue">
+      <strong>SecretStore/ExternalSecret no matches for kind</strong>
+      <p>ESO CRD chưa có. Chờ <code>external-secrets</code> rollout xong rồi apply config.</p>
+    </div>
+    <div class="card blue">
+      <strong>ExternalSecret chưa Ready</strong>
+      <p>Kiểm tra <code>aws-creds</code>, region, IAM quyền <code>secretsmanager:GetSecretValue</code>, và tên secret <code>/demo/db/password</code>.</p>
+    </div>
+    <div class="card blue">
+      <strong>Pod không đọc được file</strong>
+      <p>Kiểm tra Secret <code>db-secret</code> đã tồn tại chưa. Pod mount path là <code>/mnt/db/password</code>.</p>
+    </div>
+    <div class="card blue">
+      <strong>Fake provider bị quay về AWS</strong>
+      <p>Bạn đã apply <code>eso-config.yaml</code>. Với fake local, test trực tiếp bằng kubectl hoặc tạm không sync app đó.</p>
+    </div>
+  </div>
+
+  <p class="small">
+    File này được tạo từ yêu cầu Lab 2.1 trong slide <code>w10_afternoon_secrets_supply_chain.html</code>
+    và khớp với manifest hiện tại trong repo.
+  </p>
+</main>
+</body>
+</html>
