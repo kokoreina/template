@@ -1,0 +1,32 @@
+# Least-privilege RBAC for user payments-dev inside namespace payments only.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: payments-workload-manager
+  namespace: payments
+  annotations:
+    argocd.argoproj.io/sync-wave: "-2"
+rules:
+- apiGroups: [""]
+  resources: ["pods", "services", "configmaps"]
+  verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+- apiGroups: ["apps"]
+  resources: ["deployments", "replicasets"]
+  verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+---
+# Bind only a namespaced Role. Do not use ClusterRoleBinding for tenant users.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: payments-dev-workload-manager
+  namespace: payments
+  annotations:
+    argocd.argoproj.io/sync-wave: "-1"
+subjects:
+- kind: User
+  name: payments-dev
+  apiGroup: rbac.authorization.k8s.io
+roleRef:
+  kind: Role
+  name: payments-workload-manager
+  apiGroup: rbac.authorization.k8s.io

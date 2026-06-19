@@ -11,7 +11,7 @@ spec:
         kind: K8sMaxReplicas
       validation:
         openAPIV3Schema:
-          type: object
+          type: object 
           properties:
             maxReplicas:
               type: integer

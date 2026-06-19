@@ -341,13 +341,45 @@ Runbooks:
 - `runbooks/supply-chain-runbook.md`
 - `runbooks/cve-exception-adr.md`
 
+## Bài tập lớn payments
+
+Added tenant onboarding for team `payments` without changing the older labs:
+
+```
+tenants/payments/      # namespace, RBAC, quota/limitrange, NetworkPolicy
+apps/payments/         # sample app, service, positive/negative manifests
+argocd/apps/payments.yaml
+argocd/apps/payments-app.yaml
+evidence/payments/README.md
+```
+
+Apply:
+
+```bash
+kubectl apply -f argocd/apps/payments.yaml
+kubectl apply -f argocd/apps/payments-app.yaml
+```
+
+Evidence checklist:
+
+```bash
+kubectl get applications -n argocd | grep payments
+kubectl get ns payments --show-labels
+kubectl auth can-i create deployments -n payments --as payments-dev
+kubectl auth can-i create deployments -n demo --as payments-dev
+kubectl auth can-i get secrets -n payments --as payments-dev
+kubectl auth can-i create rolebindings -n payments --as payments-dev
+kubectl get resourcequota,limitrange,networkpolicy -n payments
+kubectl apply -f apps/payments/bad-violation-test.yaml
+kubectl get deploy,svc,pods -n payments
+```
+
 ### Sync Waves
 ArgoCD applications deploy in order:
 - Wave -2: `external-secrets`, `policy-controller`, `gatekeeper`
-- Wave -1: `app-common` (namespace)
+- Wave -1: `app-common` (namespace), `eso-config`, `policies`, `payments` (tenant resources)
 - Wave 0: `k8s-prometheus`, `k8s-rollout` (infrastructure)
-- Wave -1: `eso-config`, `policies`
-- Wave 1: `app-analysis`, `app-alert`, `gatekeeper-constraints` (configuration)
+- Wave 1: `app-analysis`, `app-alert`, `gatekeeper-constraints`, `payments-app` (configuration/application)
 - Wave 2: `app-api` (application)
 
 ## Cleanup

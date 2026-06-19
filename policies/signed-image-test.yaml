@@ -10,7 +10,7 @@ spec:
   restartPolicy: Never
   containers:
   - name: signed
-    image: ghcr.io/kokoreina/w10-api:v0.0.1-c782b0a
+    image: ghcr.io/kokoreina/w10-api@sha256:c0e7effabd43a8e5662f39b32f34f95854b725ea90137e3a5ba3c49695fe69b6
     imagePullPolicy: IfNotPresent
     ports:
     - containerPort: 8080

@@ -1,0 +1,11 @@
+# Big exercise - namespace for the payments tenant.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: payments
+  annotations:
+    argocd.argoproj.io/sync-wave: "-3"
+  labels:
+    name: payments
+    team: payments
+    security.kokoreina.dev/guardrails: "enabled"

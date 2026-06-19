@@ -1,0 +1,41 @@
+# Tenant budget for payments. Keeps noisy workloads inside their namespace budget.
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: payments-quota
+  namespace: payments
+  annotations:
+    argocd.argoproj.io/sync-wave: "-1"
+spec:
+  hard:
+    requests.cpu: "1"
+    requests.memory: 1Gi
+    limits.cpu: "2"
+    limits.memory: 2Gi
+    pods: "10"
+    services: "5"
+    configmaps: "10"
+---
+# Defaults ensure pods that omit requests/limits still get bounded resources.
+apiVersion: v1
+kind: LimitRange
+metadata:
+  name: payments-default-limits
+  namespace: payments
+  annotations:
+    argocd.argoproj.io/sync-wave: "-1"
+spec:
+  limits:
+  - type: Container
+    defaultRequest:
+      cpu: 50m
+      memory: 64Mi
+    default:
+      cpu: 200m
+      memory: 256Mi
+    max:
+      cpu: 500m
+      memory: 512Mi
+    min:
+      cpu: 10m
+      memory: 32Mi

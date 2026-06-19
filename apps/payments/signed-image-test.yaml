@@ -1,0 +1,51 @@
+# Optional positive test pod. Replace the image with a signed tenant image if signature policy is broadened later.
+apiVersion: v1
+kind: Pod
+metadata:
+  name: payments-signed-image-test
+  namespace: payments
+  annotations:
+    argocd.argoproj.io/hook: Skip
+  labels:
+    app: payments-signed-image-test
+spec:
+  restartPolicy: Never
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 101
+    runAsGroup: 101
+    fsGroup: 101
+  containers:
+  - name: nginx
+    image: nginxinc/nginx-unprivileged:1.27-alpine
+    imagePullPolicy: IfNotPresent
+    ports:
+    - containerPort: 8080
+      name: http
+    securityContext:
+      allowPrivilegeEscalation: false
+      readOnlyRootFilesystem: true
+      capabilities:
+        drop:
+        - ALL
+    resources:
+      requests:
+        cpu: 25m
+        memory: 32Mi
+      limits:
+        cpu: 100m
+        memory: 128Mi
+    volumeMounts:
+    - name: nginx-cache
+      mountPath: /var/cache/nginx
+    - name: nginx-run
+      mountPath: /var/run
+    - name: nginx-tmp
+      mountPath: /tmp
+  volumes:
+  - name: nginx-cache
+    emptyDir: {}
+  - name: nginx-run
+    emptyDir: {}
+  - name: nginx-tmp
+    emptyDir: {}
